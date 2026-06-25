@@ -1,0 +1,226 @@
+:root {
+  color: #f2f3e9;
+  background: #171a16;
+  font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(201, 255, 56, 0.15), transparent 18rem),
+    #171a16;
+}
+
+.sender-shell {
+  width: min(100% - 28px, 560px);
+  margin: auto;
+  padding: max(20px, env(safe-area-inset-top)) 0 max(30px, env(safe-area-inset-bottom));
+}
+
+header {
+  height: 58px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+header strong,
+header small {
+  display: block;
+}
+
+header strong {
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+header small {
+  margin-top: 2px;
+  color: #8f9489;
+  font: 8px monospace;
+  letter-spacing: 0.15em;
+}
+
+.sender-logo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #171a16;
+  background: #c9ff38;
+  border-radius: 50%;
+  font: bold 15px Georgia, serif;
+}
+
+.secure-chip {
+  padding: 7px 9px;
+  color: #aeb3a6;
+  border: 1px solid #393d36;
+  border-radius: 20px;
+  font-size: 9px;
+}
+
+.sender-card {
+  overflow: hidden;
+  border: 1px solid #393d36;
+  background: #20231f;
+}
+
+.preview {
+  position: relative;
+  height: min(52vh, 430px);
+  overflow: hidden;
+  background: #10120f;
+}
+
+.preview video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: #747a70;
+  font-size: 12px;
+  background:
+    linear-gradient(rgba(201, 255, 56, 0.02), rgba(201, 255, 56, 0.02)),
+    repeating-linear-gradient(90deg, transparent 0 49px, rgba(201, 255, 56, 0.04) 50px),
+    repeating-linear-gradient(0deg, transparent 0 49px, rgba(201, 255, 56, 0.04) 50px);
+}
+
+.preview-empty.hidden {
+  display: none;
+}
+
+.preview-empty span {
+  width: 68px;
+  height: 68px;
+  border: 1px solid #555b51;
+  border-radius: 50%;
+}
+
+.preview-empty span::after {
+  content: "";
+  display: block;
+  width: 24px;
+  height: 18px;
+  margin: 24px auto;
+  border: 1px solid #c9ff38;
+}
+
+.preview-state {
+  position: absolute;
+  inset: 12px 12px auto;
+  display: flex;
+  justify-content: space-between;
+  font: 9px monospace;
+  letter-spacing: 0.08em;
+}
+
+.preview-state span {
+  padding: 6px 8px;
+  color: #dce0d5;
+  background: rgba(16, 18, 15, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.sender-copy,
+form,
+.sender-hint {
+  margin-inline: 20px;
+}
+
+.sender-copy {
+  padding: 25px 0 8px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: #c9ff38;
+  font: 9px monospace;
+  letter-spacing: 0.14em;
+}
+
+h1 {
+  margin: 0;
+  font: 400 clamp(34px, 10vw, 50px)/0.98 Georgia, "Songti SC", serif;
+  letter-spacing: -0.04em;
+}
+
+.sender-copy > p:last-child {
+  margin: 18px 0 0;
+  color: #9da296;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+form {
+  padding: 18px 0 6px;
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid #393d36;
+}
+
+label {
+  color: #858b80;
+  font-size: 10px;
+}
+
+input,
+select,
+button {
+  height: 46px;
+  border: 1px solid #444940;
+  border-radius: 2px;
+  color: #eef0e7;
+  background: #171a16;
+  font: inherit;
+}
+
+input,
+select {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+input {
+  text-transform: uppercase;
+  font-family: monospace;
+  font-size: 18px;
+  letter-spacing: 0.28em;
+}
+
+button {
+  grid-column: 1 / -1;
+  margin-top: 5px;
+  color: #151713;
+  background: #c9ff38;
+  border-color: #c9ff38;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+.sender-hint {
+  min-height: 42px;
+  padding: 8px 0 18px;
+  color: #858b80;
+  font-size: 10px;
+  line-height: 1.6;
+}

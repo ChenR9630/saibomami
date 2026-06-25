@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NEKO.SYNC Master Cat Rig Test</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./desktop-pet.css" />
+    <style>
+      body {
+        background: #f7f3ed !important;
+      }
+
+      .desktop-stage {
+        width: min(100vw, 960px);
+        height: min(100vh, 720px);
+        margin: 0 auto;
+      }
+
+      .desktop-status {
+        opacity: 1;
+        color: rgba(45, 36, 30, 0.8);
+        background: rgba(255, 255, 255, 0.72);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="desktop-stage desktop-mode-premium" id="desktopStage">
+      <div class="desktop-shadow"></div>
+      <canvas class="desktop-3d-canvas" id="desktopTwin3DCanvas" aria-label="母版猫三维骨架测试"></canvas>
+      <div class="cyber-cat skin-original is-idle" id="desktopCat" aria-hidden="true"></div>
+      <div class="desktop-status" id="desktopStatus">正在加载母版骨架</div>
+    </main>
+    <script>
+      document.write(`<script src="./twin-3d.bundle.js?v=${Date.now()}"><\/script>`);
+    </script>
+    <script src="./master-cat-test.js"></script>
+  </body>
+</html>

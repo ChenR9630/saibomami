@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Master Rebind Test</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #101311;
+        color: #e8efe6;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      .stage {
+        position: relative;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        min-height: 100%;
+        overflow: hidden;
+      }
+
+      #petStage {
+        position: relative;
+        min-height: 70vh;
+      }
+
+      #twin3DCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      .panel {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        padding: 14px 16px;
+        border-top: 1px solid rgb(255 255 255 / 14%);
+        background: rgb(16 19 17 / 88%);
+      }
+
+      .panel strong {
+        margin-right: 10px;
+        font-size: 14px;
+        color: #c9ff38;
+      }
+
+      button {
+        border: 1px solid rgb(201 255 56 / 40%);
+        border-radius: 6px;
+        background: rgb(201 255 56 / 12%);
+        color: #f6ffe8;
+        cursor: pointer;
+        font: inherit;
+        padding: 8px 10px;
+      }
+
+      button:hover {
+        background: rgb(201 255 56 / 20%);
+      }
+
+      #status {
+        margin-left: auto;
+        color: #aeb8ad;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage">
+      <section id="petStage">
+        <canvas id="twin3DCanvas" aria-label="重绑定数字分身测试"></canvas>
+      </section>
+      <nav class="panel" aria-label="动作测试">
+        <strong>MASTER REBIND</strong>
+        <button type="button" data-action="idle">待机</button>
+        <button type="button" data-action="running">奔跑</button>
+        <button type="button" data-action="jumpStart">起跳</button>
+        <button type="button" data-action="jumping">腾跃</button>
+        <button type="button" data-action="jumpFall">下落</button>
+        <button type="button" data-action="jumpEnd">落地</button>
+        <span id="status">加载中</span>
+      </nav>
+    </main>
+
+    <script src="./twin-3d.bundle.js"></script>
+    <script>
+      const statusNode = document.querySelector("#status");
+
+      async function boot() {
+        if (!window.twin3D) {
+          await new Promise((resolve) => window.addEventListener("twin3dready", resolve, { once: true }));
+        }
+        const response = await fetch("/api/twin/3d/master-rebind", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error || "MASTER_REBIND_LOAD_FAILED");
+        }
+        await window.twin3D.loadModel(payload.modelUrl, payload.animations);
+        window.twin3D.setAction("idle");
+        statusNode.textContent = "已加载 master-cat-v1 骨架实验模型";
+      }
+
+      document.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => {
+          window.twin3D?.setAction(button.dataset.action);
+          statusNode.textContent = button.textContent;
+        });
+      });
+
+      boot().catch((error) => {
+        statusNode.textContent = error.message;
+      });
+    </script>
+  </body>
+</html>

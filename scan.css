@@ -1,0 +1,202 @@
+:root {
+  color: #eef0e7;
+  background: #171a16;
+  font-family: "Helvetica Neue", "PingFang SC", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 80% 8%, rgba(201, 255, 56, 0.14), transparent 18rem),
+    #171a16;
+}
+
+main {
+  width: min(100%, 620px);
+  min-height: 100vh;
+  margin: auto;
+  padding-bottom: max(22px, env(safe-area-inset-bottom));
+}
+
+header {
+  height: 70px;
+  padding: max(12px, env(safe-area-inset-top)) 18px 0;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+header strong,
+header small {
+  display: block;
+}
+
+header strong {
+  font-size: 14px;
+}
+
+header small {
+  color: #8f9489;
+  font: 8px monospace;
+  letter-spacing: 0.16em;
+}
+
+.scan-logo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: #171a16;
+  background: #c9ff38;
+  border-radius: 50%;
+  font: bold 15px Georgia, serif;
+}
+
+#scanCounter {
+  color: #c9ff38;
+  font: 11px monospace;
+}
+
+.scan-preview {
+  position: relative;
+  height: min(62vh, 520px);
+  overflow: hidden;
+  background: #0c0e0c;
+}
+
+.scan-preview video,
+.scan-preview canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.scan-preview video {
+  object-fit: cover;
+}
+
+.scan-preview canvas {
+  display: none;
+}
+
+.guide-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 78%;
+  height: 58%;
+  display: grid;
+  place-items: start center;
+  border: 1px solid rgba(201, 255, 56, 0.75);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 999px rgba(9, 11, 9, 0.18);
+}
+
+.guide-ring::before,
+.guide-ring::after {
+  content: "";
+  position: absolute;
+  background: #c9ff38;
+}
+
+.guide-ring::before {
+  left: -8px;
+  right: -8px;
+  top: 50%;
+  height: 1px;
+}
+
+.guide-ring::after {
+  top: -8px;
+  bottom: -8px;
+  left: 50%;
+  width: 1px;
+}
+
+.guide-ring span {
+  z-index: 1;
+  margin-top: -16px;
+  padding: 7px 10px;
+  color: #171a16;
+  background: #c9ff38;
+  font-size: 10px;
+}
+
+.scan-state {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 7px 9px;
+  background: rgba(12, 14, 12, 0.72);
+  font: 9px monospace;
+}
+
+.scan-controls {
+  padding: 22px 18px;
+}
+
+.scan-step {
+  min-height: 46px;
+  margin: 0;
+  color: #c7cbc1;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.progress {
+  height: 3px;
+  margin: 16px 0 20px;
+  background: #343830;
+}
+
+.progress i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #c9ff38;
+  transition: width 0.3s ease;
+}
+
+.scan-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+}
+
+button {
+  min-height: 48px;
+  color: #eef0e7;
+  border: 1px solid #464b42;
+  background: #222520;
+  font: inherit;
+}
+
+#captureButton {
+  color: #151713;
+  border-color: #c9ff38;
+  background: #c9ff38;
+}
+
+button:disabled {
+  opacity: 0.42;
+}
+
+.finish-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.scan-note {
+  margin: 15px 0 0;
+  color: #81877c;
+  font-size: 10px;
+  line-height: 1.6;
+}

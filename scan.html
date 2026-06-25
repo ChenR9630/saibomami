@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#171a16" />
+    <title>NEKO.SYNC 猫咪 3D 扫描</title>
+    <link rel="stylesheet" href="./scan.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <span class="scan-logo">N</span>
+        <div>
+          <strong>NEKO.SYNC</strong>
+          <small>CAT 3D CAPTURE</small>
+        </div>
+        <span id="scanCounter">0 / 24</span>
+      </header>
+
+      <section class="scan-preview">
+        <video id="scanVideo" autoplay muted playsinline></video>
+        <canvas id="scanCanvas"></canvas>
+        <div class="guide-ring">
+          <span id="guideDirection">准备扫描</span>
+        </div>
+        <div class="scan-state" id="scanState">等待开启摄像头</div>
+      </section>
+
+      <section class="scan-controls">
+        <p class="scan-step" id="scanStep">让猫保持趴卧或站立，光线均匀，避免它在拍摄时转身。</p>
+        <div class="progress"><i id="scanProgress"></i></div>
+        <div class="scan-actions">
+          <button id="startScanButton" type="button">开始扫描</button>
+          <button id="captureButton" type="button" disabled>拍摄此角度</button>
+        </div>
+        <button class="finish-button" id="finishScanButton" type="button" disabled>
+          完成并提交重建
+        </button>
+        <p class="scan-note">
+          照片只上传到当前电脑。猫移动会产生重影，建议在它安静趴卧时拍摄。
+        </p>
+      </section>
+    </main>
+
+    <script src="./scan.js"></script>
+  </body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "id": "master-cat-v1",
+  "role": "canonical-quadruped-cat-rig",
+  "sourceBlend": "assets/master-cat/cat.blend",
+  "runtimeModel": "assets/master-cat/master-cat.glb",
+  "report": "assets/master-cat/master-cat.report.json",
+  "runtimeExport": {
+    "meshes": [
+      "tmp07h_6s3zobj"
+    ],
+    "armatures": [
+      "rig"
+    ]
+  },
+  "notes": [
+    "cat.blend is the editable master rig source with control widgets and metarig data.",
+    "master-cat.glb is the cleaned runtime export containing only the skinned cat mesh and rig armature.",
+    "The source file currently contains no baked Action animations; reuse the existing maomao#0001 animation library for motion retargeting.",
+    "glTF export clamps vertex skinning to the top 4 joint influences per vertex, which is expected for browser runtime compatibility."
+  ]
+}

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NEKO.SYNC Desktop Pet</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./desktop-pet.css" />
+  </head>
+  <body>
+    <main class="desktop-stage" id="desktopStage">
+      <div class="desktop-shadow"></div>
+      <div class="desktop-build-effect" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <canvas class="desktop-3d-canvas" id="desktopTwin3DCanvas" aria-label="桌面三维数字分身"></canvas>
+      <div class="cyber-cat skin-original is-idle" id="desktopCat" aria-label="桌面数字宠物">
+        <div class="tail"><span></span></div>
+        <div class="body">
+          <span class="body-line"></span>
+          <span class="flank-light"></span>
+        </div>
+        <div class="leg leg-back-left"></div>
+        <div class="leg leg-back-right"></div>
+        <div class="leg leg-front-left"></div>
+        <div class="leg leg-front-right"></div>
+        <div class="neck"></div>
+        <div class="head">
+          <div class="ear ear-left"><i></i></div>
+          <div class="ear ear-right"><i></i></div>
+          <span class="face-panel"></span>
+          <span class="eye eye-left"></span>
+          <span class="eye eye-right"></span>
+          <span class="nose"></span>
+        </div>
+        <span class="tracker tracker-head"></span>
+        <span class="tracker tracker-hip"></span>
+        <span class="tracker tracker-paw"></span>
+      </div>
+      <div class="desktop-status" id="desktopStatus">等待控制台</div>
+
+      <div class="chat-layer" id="chatLayer">
+        <div class="chat-name-row">
+          <span class="chat-name-display" id="petNameDisplay" title="点击修改名字">Neko</span>
+          <span class="chat-quota-display" id="chatQuotaDisplay"></span>
+          <input class="chat-name-input" id="petNameInput" maxlength="12" autocomplete="off" />
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-bar">
+          <input
+            type="text"
+            id="chatInput"
+            class="chat-input"
+            placeholder="跟 Neko 说点什么..."
+            autocomplete="off"
+          />
+          <button class="chat-close-btn" id="chatCloseBtn" type="button" title="关闭聊天">✕</button>
+        </div>
+        <div class="chat-hint" id="chatHint">拖拽文件到猫身上 · 右键点击猫聊天</div>
+      </div>
+
+      <div class="speech-bubble" id="speechBubble">
+        <span></span>
+      </div>
+    </main>
+    <script src="./twin-3d.bundle.js"></script>
+    <script src="./desktop-pet.js"></script>
+  </body>
+</html>

@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="赛博养宠基础演示版：摄像头捕捉、姿态追踪与虚拟宠物实时同步。"
+    />
+    <title>NEKO.SYNC | 赛博养宠</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="NEKO.SYNC 首页">
+        <span class="brand-mark">
+          <span></span>
+          <span></span>
+        </span>
+        <span>
+          <strong>NEKO.SYNC</strong>
+          <small>CYBER PET SYSTEM</small>
+        </span>
+      </a>
+
+      <div class="system-state">
+        <span class="live-dot"></span>
+        <span>本地运行</span>
+        <span class="privacy-label">画面不会上传</span>
+      </div>
+
+      <div class="topbar-actions">
+        <span class="account-chip" id="accountChip">未登录</span>
+        <span class="sub-badge" id="subBadge" hidden></span>
+        <button class="auth-button" id="loginButton" type="button">登录</button>
+        <button class="auth-button primary" id="registerButton" type="button">注册</button>
+        <button class="auth-button upgrade is-disabled" id="upgradeButton" type="button" hidden aria-disabled="true">无限对话待上线</button>
+        <button class="auth-button" id="logoutButton" type="button" hidden>退出</button>
+        <button class="icon-button" id="soundButton" type="button" aria-label="切换声音">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 9v6h4l5 4V5L9 9H5Z"></path>
+            <path class="sound-wave" d="M17 9c1.3 1.7 1.3 4.3 0 6"></path>
+            <path class="sound-wave" d="M20 6c3 3.3 3 8.7 0 12"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="hero-copy">
+        <div>
+          <p class="eyebrow"><span>01</span> REAL-TIME MOTION TWIN</p>
+          <h1>让它在另一个<br /><em>数字世界</em>醒来</h1>
+        </div>
+        <p class="hero-description">
+          使用普通摄像头捕捉宠物动作，在本地生成它的虚拟分身。
+          无需项圈，不保存原始影像。
+        </p>
+      </section>
+
+      <section class="workspace" aria-label="赛博养宠控制台">
+        <article class="panel camera-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-index">INPUT / 01</p>
+              <h2>现实捕捉</h2>
+            </div>
+            <span class="status-chip" id="cameraStatus">
+              <i></i>
+              等待连接
+            </span>
+          </div>
+
+          <div class="camera-stage" id="cameraStage">
+            <video id="cameraFeed" autoplay muted playsinline></video>
+            <canvas id="poseCanvas" aria-hidden="true"></canvas>
+            <div class="camera-placeholder" id="cameraPlaceholder">
+              <div class="scan-frame">
+                <span></span><span></span><span></span><span></span>
+                <div class="scan-line"></div>
+                <svg viewBox="0 0 64 64" aria-hidden="true">
+                  <path d="M19 25 13 12c8 1 12 5 14 10 3-1 7-1 10 0 3-5 7-8 14-9l-5 13c4 4 6 9 6 14 0 11-9 18-20 18S12 51 12 40c0-6 2-11 7-15Z"></path>
+                  <circle cx="25" cy="38" r="2"></circle>
+                  <circle cx="40" cy="38" r="2"></circle>
+                  <path d="M29 45c2 2 5 2 7 0"></path>
+                </svg>
+              </div>
+              <p>让宠物完整出现在镜头中</p>
+              <small>建议距离 1.5 - 3 米，保持光线充足</small>
+            </div>
+
+            <div class="camera-overlay">
+              <span id="resolutionLabel">CAM 00</span>
+              <span class="fps-label">30 FPS</span>
+            </div>
+          </div>
+
+          <div class="camera-actions">
+            <div class="camera-source">
+              <label for="cameraDevice">视频输入</label>
+              <div class="source-control">
+                <select id="cameraDevice" aria-label="选择摄像头">
+                  <option value="">自动选择摄像头</option>
+                </select>
+                <button id="refreshDevicesButton" type="button" aria-label="刷新摄像头列表">
+                  ↻
+                </button>
+              </div>
+              <small id="protocolLabel">MediaStream · 设备列表需授权后显示</small>
+            </div>
+            <button class="calibrate-button" id="calibrateButton" type="button" disabled>
+              <span></span>
+              校准环境
+            </button>
+            <button class="primary-button" id="cameraButton" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 7h4l2-3h6l2 3h4v13H3V7Z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+              <span id="cameraButtonLabel">开启摄像头</span>
+            </button>
+            <button class="secondary-button" id="demoButton" type="button">
+              使用演示模式
+            </button>
+            <button class="secondary-button remote-button" id="remoteCameraButton" type="button">
+              连接手机摄像头
+            </button>
+          </div>
+        </article>
+
+        <div class="sync-bridge" aria-hidden="true">
+          <span class="bridge-line"></span>
+          <span class="bridge-core">
+            <svg viewBox="0 0 24 24">
+              <path d="m8 7 5 5-5 5"></path>
+              <path d="m13 7 5 5-5 5"></path>
+            </svg>
+          </span>
+          <p>POSE DATA</p>
+        </div>
+
+        <article class="panel twin-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-index">OUTPUT / 02</p>
+              <h2>数字分身</h2>
+            </div>
+            <span class="status-chip online">
+              <i></i>
+              引擎就绪
+            </span>
+          </div>
+
+          <div class="twin-skin-control">
+            <div class="twin-skin-heading">
+              <div>
+                <span>AVATAR APPEARANCE</span>
+                <strong>粒子数字分身</strong>
+              </div>
+              <div class="twin-skin-actions">
+                <button class="desktop-toggle-button is-on" id="desktopTwinButton" type="button" aria-pressed="true">
+                  <span aria-hidden="true"></span>
+                  <span id="desktopTwinButtonLabel">桌面显示</span>
+                </button>
+                <button id="catSkinButton" type="button">
+                  <span aria-hidden="true">＋</span>
+                  <span id="catSkinButtonLabel">创建身份分身</span>
+                </button>
+              </div>
+            </div>
+            <div class="twin-build-status" aria-label="三维分身结构">
+              <span><i></i>粒子点云</span>
+              <span><i></i>三维猫形</span>
+              <span><i></i>光场轮廓</span>
+            </div>
+            <p id="skinControlHint">默认显示粒子科技虚拟猫；提交定制后会更新为你的专属猫咪分身。</p>
+          </div>
+
+          <div class="pet-stage" id="petStage">
+            <canvas class="twin-3d-canvas" id="twin3DCanvas" aria-label="三维猫咪数字分身"></canvas>
+            <div class="orbit orbit-one"></div>
+            <div class="orbit orbit-two"></div>
+            <div class="ground-grid"></div>
+            <div class="pet-shadow"></div>
+
+            <div class="cyber-cat skin-original is-idle" id="cyberCat" aria-label="虚拟猫模型">
+              <div class="tail">
+                <span></span>
+              </div>
+              <div class="body">
+                <span class="body-line"></span>
+                <span class="flank-light"></span>
+              </div>
+              <div class="leg leg-back-left"></div>
+              <div class="leg leg-back-right"></div>
+              <div class="leg leg-front-left"></div>
+              <div class="leg leg-front-right"></div>
+              <div class="neck"></div>
+              <div class="head">
+                <div class="ear ear-left"><i></i></div>
+                <div class="ear ear-right"><i></i></div>
+                <span class="face-panel"></span>
+                <span class="eye eye-left"></span>
+                <span class="eye eye-right"></span>
+                <span class="nose"></span>
+              </div>
+              <span class="tracker tracker-head"></span>
+              <span class="tracker tracker-hip"></span>
+              <span class="tracker tracker-paw"></span>
+            </div>
+
+            <div class="pet-readout">
+              <span id="twinDriverLabel">TWIN // WAITING</span>
+              <strong id="actionReadout">待机</strong>
+            </div>
+            <div class="twin-telemetry">
+              <span>运动中心 <strong id="centroidReadout">50 / 55</strong></span>
+              <span>驱动置信 <strong id="confidenceReadout">--</strong></span>
+              <span>主体锁定 <strong id="subjectReadout">等待</strong></span>
+            </div>
+            <div class="view-controls" role="group" aria-label="视角控制">
+              <button type="button" data-view="-1" aria-label="向左旋转">↙</button>
+              <button class="active" type="button" data-view="0">正面</button>
+              <button type="button" data-view="1" aria-label="向右旋转">↘</button>
+            </div>
+            <div class="pose-controls" role="group" aria-label="动作预览">
+              <span>动作预览</span>
+              <button type="button" data-pose="walking">行走</button>
+              <button type="button" data-pose="running">奔跑</button>
+              <button type="button" data-pose="prowling">潜行</button>
+              <button type="button" data-pose="turning">转身</button>
+              <button type="button" data-pose="jumpStart">起跳</button>
+              <button type="button" data-pose="jumping">腾跃</button>
+              <button type="button" data-pose="jumpFall">下落</button>
+              <button type="button" data-pose="jumpEnd">落地</button>
+            </div>
+          </div>
+
+          <div class="twin-footer">
+            <div class="signal-meter">
+              <span>同步质量</span>
+              <div class="bars" id="signalBars">
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <strong id="qualityValue">--</strong>
+            </div>
+            <button class="pause-button" id="pauseButton" type="button" disabled>
+              <span></span>
+              暂停同步
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section class="metrics" aria-label="本次活动数据">
+        <div class="metric-intro">
+          <p class="eyebrow"><span>02</span> LIVE ACTIVITY</p>
+          <h2>它此刻的状态</h2>
+        </div>
+        <article class="metric-card">
+          <span class="metric-icon">↗</span>
+          <div>
+            <small>活跃度</small>
+            <strong><span id="activityValue">0</span><em>%</em></strong>
+          </div>
+          <div class="mini-chart" id="activityChart" aria-hidden="true"></div>
+        </article>
+        <article class="metric-card">
+          <span class="metric-icon">◎</span>
+          <div>
+            <small>动作计数</small>
+            <strong><span id="motionValue">0</span><em>次</em></strong>
+          </div>
+          <p id="motionHint">等待开始捕捉</p>
+        </article>
+        <article class="metric-card accent-card">
+          <span class="metric-icon">⌁</span>
+          <div>
+            <small>系统延迟</small>
+            <strong><span id="latencyValue">--</span><em>ms</em></strong>
+          </div>
+          <p>本地实时解算</p>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>NEKO.SYNC DEMO 0.1</p>
+      <p>普通摄像头 · 本地处理 · 数字分身</p>
+    </footer>
+
+    <section class="community-section" id="communitySection" aria-label="社区分享">
+      <div class="community-header">
+        <div>
+          <p class="panel-index">COMMUNITY / 04</p>
+          <h2>铲屎官社区</h2>
+        </div>
+        <div class="community-topics" id="communityTopics">
+          <button class="community-topic-chip active" data-topic="">全部</button>
+          <button class="community-topic-chip" data-topic="猫咪日常">猫咪日常</button>
+          <button class="community-topic-chip" data-topic="搞笑瞬间">搞笑瞬间</button>
+          <button class="community-topic-chip" data-topic="养猫心得">养猫心得</button>
+          <button class="community-topic-chip" data-topic="猫咪美照">猫咪美照</button>
+          <button class="community-topic-chip" data-topic="AI趣聊">AI趣聊</button>
+        </div>
+      </div>
+
+      <div class="community-share-box" id="communityShareBox">
+        <div class="share-box-inner">
+          <label class="share-image-btn" id="shareImageBtn" title="添加图片">
+            <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M21 15l-5-5L5 21" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+            <input type="file" id="communityImageInput" accept="image/jpeg,image/png,image/webp" hidden />
+          </label>
+          <textarea id="communityContent" class="community-textarea" placeholder="分享猫咪的精彩瞬间..." maxlength="500" rows="2"></textarea>
+        </div>
+        <div class="share-preview" id="sharePreview" hidden>
+          <img id="sharePreviewImg" src="" alt="预览" />
+          <button id="shareRemoveImage" type="button" class="share-remove-img">✕</button>
+        </div>
+        <div class="community-share-row">
+          <select id="communityTopic" class="community-topic-select">
+            <option value="">选择话题（可选）</option>
+            <option value="猫咪日常">猫咪日常</option>
+            <option value="搞笑瞬间">搞笑瞬间</option>
+            <option value="养猫心得">养猫心得</option>
+            <option value="猫咪美照">猫咪美照</option>
+            <option value="AI趣聊">AI趣聊</option>
+          </select>
+          <button id="communityPostBtn" class="community-post-btn" type="button" disabled>发布</button>
+        </div>
+        <span class="community-login-hint" id="communityLoginHint">登录后即可分享</span>
+      </div>
+
+      <div class="community-feed" id="communityFeed" aria-live="polite">
+        <div class="community-loading">加载中...</div>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <dialog class="pair-dialog" id="pairDialog">
+      <button class="pair-close" id="pairCloseButton" type="button" aria-label="关闭">×</button>
+      <p class="panel-index">REMOTE CAMERA / WEBRTC</p>
+      <h2>连接手机摄像头</h2>
+      <p class="pair-description">
+        手机和电脑连接同一 Wi-Fi。用手机打开下方地址，并输入配对码。
+      </p>
+      <div class="pair-code" id="pairCode">------</div>
+      <label for="phoneUrl">手机访问地址</label>
+      <div class="pair-url">
+        <input id="phoneUrl" type="text" readonly />
+        <button id="copyPhoneUrlButton" type="button">复制</button>
+      </div>
+      <div class="certificate-setup">
+        <span>手机首次使用先打开</span>
+        <input id="certificateUrl" type="text" readonly />
+      </div>
+      <div class="pair-status">
+        <i></i>
+        <span id="pairStatus">正在创建 WebRTC 会话</span>
+      </div>
+      <p class="pair-note">
+        安装并信任证书后，再打开上方手机地址并允许摄像头权限。
+      </p>
+    </dialog>
+
+    <dialog class="pair-dialog auth-dialog" id="authDialog">
+      <button class="pair-close" id="authCloseButton" type="button" aria-label="关闭">×</button>
+      <p class="panel-index">ACCOUNT / NEKO.SYNC</p>
+      <h2 id="authTitle">注册账号</h2>
+      <p class="pair-description">
+        给自己的猫咪起个名字，设置密码后即可进入 NEKO.SYNC。
+      </p>
+      <div class="auth-method-tabs" id="authMethodTabs" hidden>
+        <button class="active" data-method="nickname" type="button">昵称账号</button>
+      </div>
+      <div class="auth-tabs">
+        <button class="active" id="authRegisterTab" type="button">注册</button>
+        <button id="authLoginTab" type="button">登录</button>
+      </div>
+      <div class="auth-fields-email" id="authFieldsEmail">
+        <label class="auth-field">
+          <span>猫咪昵称</span>
+          <input id="authNicknameInput" type="text" autocomplete="nickname" placeholder="例如：团团、Mochi、奶盖" maxlength="18" />
+        </label>
+        <label class="auth-field">
+          <span>密码</span>
+          <input id="authPasswordInput" type="password" autocomplete="new-password" placeholder="至少 8 位，含字母和数字" />
+        </label>
+        <label class="auth-field" id="authPasswordConfirmField">
+          <span>确认密码</span>
+          <input id="authPasswordConfirmInput" type="password" autocomplete="new-password" placeholder="再输入一次密码" />
+        </label>
+        <p class="auth-phone-note">昵称可以直接用你的猫咪名字，之后也会显示在账号位置。</p>
+      </div>
+      <div class="auth-fields-phone" id="authFieldsPhone" hidden>
+        <label class="auth-field">
+          <span>手机号</span>
+          <input id="authPhoneInput" type="tel" autocomplete="tel" placeholder="输入 11 位手机号" maxlength="11" />
+        </label>
+        <div class="auth-sms-row">
+          <label class="auth-field auth-field-code">
+            <span>验证码</span>
+            <input id="authCodeInput" type="text" autocomplete="one-time-code" placeholder="6 位验证码" maxlength="6" />
+          </label>
+          <button class="auth-send-code-btn" id="authSendCodeBtn" type="button">发送验证码</button>
+        </div>
+        <input id="authPhonePasswordInput" type="hidden" value="" />
+        <p class="auth-phone-note">验证码即登录或注册，无需设置密码。</p>
+      </div>
+      <div class="auth-fields-wechat" id="authFieldsWechat" hidden>
+        <div class="auth-wechat-qr" id="authWechatQr">
+          <p class="auth-wechat-pending">微信登录需要在 .env.local 中配置 WECHAT_APP_ID 和 WECHAT_APP_SECRET</p>
+        </div>
+      </div>
+      <button class="skin-apply-button auth-submit" id="authSubmitButton" type="button">注册并登录</button>
+      <div class="fusion-status" id="authStatus" aria-live="polite">
+        <i></i>
+        <span>等待输入账号信息</span>
+      </div>
+    </dialog>
+
+    <dialog class="pair-dialog skin-dialog" id="skinDialog">
+      <button class="pair-close" id="skinCloseButton" type="button" aria-label="关闭">×</button>
+      <p class="panel-index">DIGITAL TWIN RESERVATION / MANUAL RIGGING</p>
+      <h2>预约真实 3D 猫咪分身</h2>
+      <p class="pair-description">
+        每天限量 20 位。上传同一只猫的 1 到 3 张照片，我们会保存素材，后续由后台手工建模、绑骨并更新到你的数字分身界面。
+      </p>
+      <div class="plan-grid">
+        <article class="plan-card">
+          <span>FREE</span>
+          <strong>基础版赛博猫咪</strong>
+          <p>注册用户免费领养，使用当前基础虚拟猫形态与本地动作同步。</p>
+          <button id="freeAdoptButton" type="button">免费领养</button>
+        </article>
+        <article class="plan-card is-featured">
+          <span>CUSTOM</span>
+          <strong>定制数字分身</strong>
+          <p>支付 18.8 元后解锁照片上传；后台手工建模、绑骨并回传动作。</p>
+          <button id="customOrderButton" type="button">开通定制版 · ¥18.8</button>
+        </article>
+      </div>
+      <div class="custom-locked-panel" id="customLockedPanel">
+        <strong>定制版未开通</strong>
+        <span>请先生成 18.8 元付款订单并扫码付款，之后即可上传猫咪照片提交后台核对。</span>
+      </div>
+      <div class="skin-upload-grid is-locked" id="skinUploadGrid">
+        <label class="skin-upload" for="catPhotoFrontInput">
+          <input id="catPhotoFrontInput" data-photo-view="front" type="file" accept="image/jpeg,image/png,image/webp" disabled />
+          <span class="skin-upload-preview" id="skinUploadFrontPreview">+</span>
+          <span>
+            <strong id="skinUploadFrontLabel">参考照片 1</strong>
+            <small>清晰看到脸部与主要花色</small>
+          </span>
+        </label>
+        <label class="skin-upload" for="catPhotoSideInput">
+          <input id="catPhotoSideInput" data-photo-view="side" type="file" accept="image/jpeg,image/png,image/webp" disabled />
+          <span class="skin-upload-preview" id="skinUploadSidePreview">+</span>
+          <span>
+            <strong id="skinUploadSideLabel">参考照片 2</strong>
+            <small>可选，补充身体与尾巴花纹</small>
+          </span>
+        </label>
+        <label class="skin-upload" for="catPhotoBackInput">
+          <input id="catPhotoBackInput" data-photo-view="back" type="file" accept="image/jpeg,image/png,image/webp" disabled />
+          <span class="skin-upload-preview" id="skinUploadBackPreview">+</span>
+          <span>
+            <strong id="skinUploadBackLabel">参考照片 3</strong>
+            <small>可选，补充背部花纹</small>
+          </span>
+        </label>
+      </div>
+      <label class="custom-identity-field is-locked" id="customIdentityField">
+        <span>用户名称</span>
+        <input id="customUserNameInput" type="text" autocomplete="name" placeholder="需要和注册昵称一致" maxlength="18" disabled />
+        <small id="customUserNameHint">提交前请填写你的注册昵称，后台会按这个名称核对付款。</small>
+      </label>
+      <div class="fusion-principles">
+        <span><i>01</i> 保存身份照片</span>
+        <span><i>02</i> 付款核对</span>
+        <span><i>03</i> 回传骨骼动作</span>
+      </div>
+      <div class="skin-actions">
+        <button id="resetSkinButton" type="button">恢复原始</button>
+        <button class="skin-apply-button" id="applySkinButton" type="button" disabled>提交预约</button>
+      </div>
+      <div class="fusion-status" id="fusionStatus" aria-live="polite">
+        <i></i>
+        <span>等待身份照片</span>
+      </div>
+      <p class="pair-note">
+        上传照片只作为身份参考，会保存到独立预约素材文件夹。数字分身和骨骼绑定完成后再更新动作。
+      </p>
+    </dialog>
+
+    <dialog class="pair-dialog payment-dialog" id="paymentDialog">
+      <button class="pair-close" id="paymentCloseButton" type="button" aria-label="关闭">×</button>
+      <p class="panel-index">CUSTOM PAYMENT / MANUAL CONFIRM</p>
+      <h2>开通定制版</h2>
+      <p class="pair-description">
+        支付 18.8 元后即可解锁定制数字分身上传入口。请使用微信或支付宝扫码付款。
+      </p>
+      <div class="payment-amount">
+        <span>应付金额</span>
+        <strong>¥18.8</strong>
+      </div>
+      <div class="payment-qr-grid">
+        <article>
+          <span>微信支付</span>
+          <img src="./assets/payment/weixin.jpeg" alt="微信收款码" />
+        </article>
+        <article>
+          <span>支付宝</span>
+          <img src="./assets/payment/zhifubao.jpeg" alt="支付宝收款码" />
+        </article>
+      </div>
+      <div class="payment-order-box" id="paymentOrderBox" hidden></div>
+      <button class="skin-apply-button payment-confirm-button" id="paymentConfirmButton" type="button">
+        生成待支付订单
+      </button>
+      <div class="fusion-status" id="paymentStatus" aria-live="polite">
+        <i></i>
+        <span>请先生成订单，再扫码支付 18.8 元</span>
+      </div>
+      <p class="pair-note">
+        当前个人收款码不会自动回调。生成订单并扫码付款后可先提交猫咪照片，后台核对到账金额后安排制作。
+      </p>
+    </dialog>
+
+    <script src="./camera-protocol.js"></script>
+    <script src="./remote-camera.js"></script>
+    <script src="./motion-twin.js"></script>
+    <script src="./app.js"></script>
+    <script src="./twin-3d.bundle.js"></script>
+  </body>
+</html>

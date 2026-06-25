@@ -1,0 +1,13 @@
+STATUS.md
+.DS_Store
+__pycache__/
+*.pyc
+node_modules/
+.cert/
+dist/
+.build-cache/
+scans/
+bin/
+.pet-appearance.json
+.generated/
+.env.local

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#171a16" />
+    <title>NEKO.SYNC 手机摄像头</title>
+    <link rel="stylesheet" href="./sender.css" />
+  </head>
+  <body>
+    <main class="sender-shell">
+      <header>
+        <span class="sender-logo">N</span>
+        <div>
+          <strong>NEKO.SYNC</strong>
+          <small>MOBILE CAMERA</small>
+        </div>
+        <span class="secure-chip">端到端视频</span>
+      </header>
+
+      <section class="sender-card">
+        <div class="preview">
+          <video id="senderVideo" autoplay muted playsinline></video>
+          <div class="preview-empty" id="previewEmpty">
+            <span></span>
+            <p>等待开启手机摄像头</p>
+          </div>
+          <div class="preview-state">
+            <span id="senderState">未连接</span>
+            <span id="senderResolution">CAM --</span>
+          </div>
+        </div>
+
+        <div class="sender-copy">
+          <p class="eyebrow">MOBILE INPUT / 01</p>
+          <h1>把手机变成<br />宠物追踪镜头</h1>
+          <p>输入电脑端显示的 6 位配对码。视频通过 WebRTC 直达电脑，不在服务器保存。</p>
+        </div>
+
+        <form id="senderForm">
+          <label for="roomCode">配对码</label>
+          <input
+            id="roomCode"
+            name="roomCode"
+            inputmode="text"
+            maxlength="6"
+            autocomplete="one-time-code"
+            placeholder="例如 A7K2P9"
+            required
+          />
+
+          <label for="facingMode">使用镜头</label>
+          <select id="facingMode">
+            <option value="environment">后置镜头</option>
+            <option value="user">前置镜头</option>
+          </select>
+
+          <button id="senderButton" type="submit">开启并连接</button>
+        </form>
+
+        <p class="sender-hint" id="senderHint">
+          首次使用时，请允许浏览器访问摄像头。
+        </p>
+      </section>
+    </main>
+
+    <script src="./sender.js"></script>
+  </body>
+</html>

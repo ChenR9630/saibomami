@@ -1,0 +1,21 @@
+{
+  "name": "neko-sync",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Local-first cyber pet motion twin demo",
+  "scripts": {
+    "build:3d": "esbuild twin-3d.js --bundle --format=iife --target=es2020 --outfile=twin-3d.bundle.js",
+    "start": "node server.js",
+    "desktop:build": "zsh scripts/build-desktop-app.sh",
+    "desktop:open": "open \"dist/NEKO.SYNC Desktop Pet.app\"",
+    "desktop:open:mac": "open \"dist/NEKO.SYNC Desktop Pet.app\"",
+    "desktop:open:win": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-desktop-windows.ps1",
+    "scan:build": "zsh scripts/build-reconstructor.sh"
+  },
+  "dependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
