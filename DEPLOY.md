@@ -41,7 +41,7 @@ cp .env.example .env.local
 nano .env.local
 ```
 
-Minimum production values:
+Minimum production values (most already defaulted correctly in .env.example):
 
 ```env
 PRODUCTION=true
@@ -49,6 +49,7 @@ PORT=8000
 LOG_LEVEL=info
 PAYMENT_ADMIN_TOKEN=replace_with_a_long_random_token
 CUSTOM_TWIN_PRICE_CNY=18.8
+ARK_API_KEY=your_ark_api_key_here
 ```
 
 Fill provider keys only for enabled features:
