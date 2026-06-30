@@ -8,8 +8,6 @@ const { spawn, spawnSync } = require("node:child_process");
 const { URL } = require("node:url");
 
 const ROOT = __dirname;
-const IS_PRODUCTION = process.env.PRODUCTION === "true";
-const logger = require("./lib/logger");
 
 function loadLocalEnvironment() {
   const environmentPath = path.join(ROOT, ".env.local");
@@ -26,6 +24,8 @@ function loadLocalEnvironment() {
 
 loadLocalEnvironment();
 
+const IS_PRODUCTION = process.env.PRODUCTION === "true";
+const logger = require("./lib/logger");
 const PORT = Number(process.env.PORT || 8443);
 const CERT_PORT = Number(process.env.CERT_PORT || 8080);
 const LOCAL_PORT = Number(process.env.LOCAL_PORT || 8000);

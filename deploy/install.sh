@@ -56,6 +56,8 @@ else
   cd "$PROJECT_DIR"
 fi
 
+sudo chown -R www-data:www-data "$PROJECT_DIR"
+
 # --- Step 3: 安装 Node 依赖 ---
 step "3/8 安装 Node 依赖"
 
@@ -69,7 +71,7 @@ log "依赖安装完成"
 step "4/8 配置环境变量"
 
 if [[ ! -f .env.local ]]; then
-  cp .env.example .env.local
+  sudo -u www-data cp .env.example .env.local
   warn "已创建 .env.local，请编辑它填入真实的 API Key"
   warn "  sudo nano $PROJECT_DIR/.env.local"
   warn ""
@@ -84,7 +86,7 @@ fi
 
 # 确保 PRODUCTION=true
 if grep -q '^PRODUCTION=false' .env.local 2>/dev/null; then
-  sed -i 's/^PRODUCTION=false/PRODUCTION=true/' .env.local
+  sudo -u www-data sed -i 's/^PRODUCTION=false/PRODUCTION=true/' .env.local
   log "已将 PRODUCTION 设为 true"
 fi
 
@@ -102,7 +104,6 @@ log "运行时目录已创建"
 step "6/8 安装 systemd 服务"
 
 sudo cp "$PROJECT_DIR/deploy/saibomami.service" /etc/systemd/system/saibomami.service
-sudo chown -R www-data:www-data "$PROJECT_DIR"
 sudo systemctl daemon-reload
 sudo systemctl enable --now saibomami
 sleep 2
