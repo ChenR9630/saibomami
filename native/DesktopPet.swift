@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var serverProcess: Process?
     private var petMode = "premium"
+    private let defaultBaseURL = "https://yutanggo.com"
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -35,10 +36,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .deletingLastPathComponent()
     }
 
+    private func baseURLString() -> String {
+        let environmentValue = ProcessInfo.processInfo.environment["NEKO_SYNC_BASE_URL"]?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = environmentValue?.isEmpty == false ? environmentValue! : defaultBaseURL
+        return value.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private func usesLocalServer() -> Bool {
+        guard let url = URL(string: baseURLString()) else { return false }
+        return ["localhost", "127.0.0.1", "::1"].contains(url.host ?? "")
+    }
+
     private func ensureServer() {
+        guard usesLocalServer() else { return }
         let semaphore = DispatchSemaphore(value: 0)
         var isRunning = false
-        var request = URLRequest(url: URL(string: "http://localhost:8000/api/info")!)
+        var request = URLRequest(url: URL(string: "\(baseURLString())/api/info")!)
         request.timeoutInterval = 0.6
         URLSession.shared.dataTask(with: request) { _, response, _ in
             isRunning = (response as? HTTPURLResponse)?.statusCode == 200
@@ -147,7 +161,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func loadPetWhenServerIsReady() {
-        var request = URLRequest(url: URL(string: "http://localhost:8000/api/info")!)
+        var request = URLRequest(url: URL(string: "\(baseURLString())/api/info")!)
         request.timeoutInterval = 0.5
         URLSession.shared.dataTask(with: request) { [weak self] _, response, _ in
             guard let self else { return }
@@ -168,7 +182,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func loadCurrentPetMode() {
         let cacheBust = Int(Date().timeIntervalSince1970)
         let petURL = URL(
-            string: "http://localhost:8000/desktop-pet.html?mode=\(petMode)&v=\(cacheBust)"
+            string: "\(baseURLString())/desktop-pet.html?mode=\(petMode)&v=\(cacheBust)"
         )!
         let request = URLRequest(
             url: petURL,
@@ -209,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         webView.evaluateJavaScript("window.desktopPet?.resetScale()")
     }
     @objc private func openConsole() {
-        NSWorkspace.shared.open(URL(string: "http://localhost:8000")!)
+        NSWorkspace.shared.open(URL(string: baseURLString())!)
     }
     @objc private func quit() { NSApp.terminate(nil) }
 

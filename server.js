@@ -210,6 +210,8 @@ const PUBLIC_FILES = new Set([
   "topology-compare.bundle.js",
   "assets/payment/weixin.jpeg",
   "assets/payment/zhifubao.jpeg",
+  "dist/neko-sync-desktop-mac.zip",
+  "dist/neko-sync-desktop-windows.zip",
 ]);
 
 const MIME_TYPES = {
@@ -224,6 +226,7 @@ const MIME_TYPES = {
   ".md": "text/markdown; charset=utf-8",
   ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".zip": "application/zip",
 };
 
 const VENDOR_FILES = new Map([

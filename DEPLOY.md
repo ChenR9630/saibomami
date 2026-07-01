@@ -60,7 +60,7 @@ OPENAI_API_KEY=
 TRIPO_API_KEY=
 WECHAT_APP_ID=
 WECHAT_APP_SECRET=
-WECHAT_REDIRECT_URI=https://your-domain.com/api/auth/wechat/callback
+WECHAT_REDIRECT_URI=https://yutanggo.com/api/auth/wechat/callback
 ```
 
 ## 5. Install systemd Service
@@ -75,15 +75,8 @@ sudo systemctl status saibomami
 
 ## 6. Configure Nginx
 
-Edit `deploy/nginx-saibomami.conf` and replace:
-
-```text
-saibomami.example.com www.saibomami.example.com
-```
-
-with the real domain names.
-
-Then install:
+Install the Nginx config, which is preconfigured for `yutanggo.com` and
+`www.yutanggo.com`:
 
 ```bash
 sudo cp deploy/nginx-saibomami.conf /etc/nginx/sites-available/saibomami
@@ -106,14 +99,14 @@ www   A     your_server_public_ip
 After DNS is resolved to the Lighthouse instance:
 
 ```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
+sudo certbot --nginx -d yutanggo.com -d www.yutanggo.com
 ```
 
 ## 9. Verify
 
 ```bash
 curl -I http://127.0.0.1:8000
-curl https://your-domain.com/api/health
+curl https://yutanggo.com/api/health
 sudo journalctl -u saibomami -f
 ```
 

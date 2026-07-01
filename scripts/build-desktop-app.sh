@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="$ROOT/dist/NEKO.SYNC Desktop Pet.app"
+ZIP="$ROOT/dist/neko-sync-desktop-mac.zip"
 CONTENTS="$APP/Contents"
 MACOS="$CONTENTS/MacOS"
 CACHE="$ROOT/.build-cache"
@@ -49,4 +50,6 @@ PLIST
 
 chmod +x "$MACOS/NEKO.SYNC Desktop Pet"
 codesign --force --deep --sign - "$APP"
+ditto -c -k --keepParent "$APP" "$ZIP"
 echo "$APP"
+echo "$ZIP"

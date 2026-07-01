@@ -20,7 +20,7 @@ info() { echo -e "${CYAN}[..]${NC}  $1"; }
 step() { echo -e "\n${CYAN}=== $1 ===${NC}"; }
 
 PROJECT_DIR="/var/www/saibomami"
-DOMAIN="${SAIBOMAMI_DOMAIN:-}"
+DOMAIN="${SAIBOMAMI_DOMAIN:-yutanggo.com}"
 REPO_URL="https://github.com/ChenR9630/saibomami.git"
 
 # --- Step 1: 检查系统 ---
@@ -93,11 +93,13 @@ fi
 # --- Step 5: 创建必要目录 ---
 step "5/8 创建运行时目录"
 
-sudo -u www-data mkdir -p "$PROJECT_DIR/.generated/auth" \
+sudo mkdir -p "$PROJECT_DIR/.generated/auth" \
   "$PROJECT_DIR/.generated/topology-tests" \
   "$PROJECT_DIR/.generated/avatar-reservations" \
   "$PROJECT_DIR/.generated/community-images" \
   "$PROJECT_DIR/scans"
+sudo chown -R www-data:www-data "$PROJECT_DIR/.generated" "$PROJECT_DIR/scans"
+sudo chmod -R u+rwX,g+rwX "$PROJECT_DIR/.generated" "$PROJECT_DIR/scans"
 log "运行时目录已创建"
 
 # --- Step 6: 安装 systemd 服务 ---
@@ -115,16 +117,16 @@ step "7/8 配置 Nginx"
 if [[ -z "$DOMAIN" ]]; then
   DOMAIN=$(curl -sS ifconfig.me 2>/dev/null || echo "your-server-ip")
   warn "未设置 SAIBOMAMI_DOMAIN，使用 IP: $DOMAIN"
-  warn "  如需绑定域名: export SAIBOMAMI_DOMAIN=your-domain.com 后重新运行"
+  warn "  如需绑定其它域名: export SAIBOMAMI_DOMAIN=example.com 后重新运行"
 fi
 
-# 替换 Nginx 配置中的 placeholder 域名
+# 替换 Nginx 配置中的默认域名
 sudo cp "$PROJECT_DIR/deploy/nginx-saibomami.conf" /etc/nginx/sites-available/saibomami
 if [[ "$DOMAIN" == "your-server-ip" ]]; then
   # 用 IP 作为 server_name
-  sudo sed -i "s/saibomami.example.com www.saibomami.example.com/_/g" /etc/nginx/sites-available/saibomami
+  sudo sed -i "s/yutanggo.com www.yutanggo.com/_/g" /etc/nginx/sites-available/saibomami
 else
-  sudo sed -i "s/saibomami.example.com www.saibomami.example.com/$DOMAIN www.$DOMAIN/g" /etc/nginx/sites-available/saibomami
+  sudo sed -i "s/yutanggo.com www.yutanggo.com/$DOMAIN www.$DOMAIN/g" /etc/nginx/sites-available/saibomami
 fi
 
 sudo ln -sf /etc/nginx/sites-available/saibomami /etc/nginx/sites-enabled/saibomami
@@ -161,6 +163,6 @@ echo -e "  重启服务: ${YELLOW}sudo systemctl restart saibomami${NC}"
 echo ""
 if [[ -n "$DOMAIN" ]] && [[ "$DOMAIN" != *.* ]]; then
   echo -e "  ${YELLOW}如需 HTTPS，先绑定域名到本机 IP，然后运行:${NC}"
-  echo -e "  ${YELLOW}sudo certbot --nginx -d your-domain.com${NC}"
+  echo -e "  ${YELLOW}sudo certbot --nginx -d ${DOMAIN}${NC}"
 fi
 echo -e "${GREEN}============================================${NC}"

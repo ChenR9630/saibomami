@@ -116,6 +116,7 @@ const state = {
   lastDesktopPublishAt: 0,
   lastDesktopOpenAt: 0,
   desktopOpenInFlight: false,
+  desktopPlatform: null,
   desktopTwinVisible: localStorage.getItem("neko.desktopTwin.visible") !== "false",
   desktopDisplayMode: localStorage.getItem("neko.desktopTwin.displayMode") || "live",
   skinDraft: {
@@ -139,6 +140,20 @@ const state = {
   authMode: "register",
   authMethod: "nickname",
 };
+
+const DESKTOP_INSTALLERS = {
+  mac: {
+    url: "/dist/neko-sync-desktop-mac.zip",
+    filename: "neko-sync-desktop-mac.zip",
+    label: "macOS",
+  },
+  windows: {
+    url: "/dist/neko-sync-desktop-windows.zip",
+    filename: "neko-sync-desktop-windows.zip",
+    label: "Windows",
+  },
+};
+const DESKTOP_INSTALL_PROMPT_KEY = "neko.desktopInstaller.prompted";
 
 const cameraProtocol = new CameraProtocol();
 const motionTwin = new MotionTwinEngine();
@@ -430,7 +445,7 @@ function renderDesktopTwinToggle() {
   }
 }
 
-function setDesktopTwinVisible(visible, announce = true) {
+function setDesktopTwinVisible(visible, announce = true, userInitiated = false) {
   state.desktopTwinVisible = Boolean(visible);
   localStorage.setItem("neko.desktopTwin.visible", String(state.desktopTwinVisible));
   renderDesktopTwinToggle();
@@ -443,32 +458,128 @@ function setDesktopTwinVisible(visible, announce = true) {
     speed: 0,
   });
   if (state.desktopTwinVisible) {
-    openDesktopTwinWindow();
+    openDesktopTwinWindow({ browserFallback: userInitiated });
   }
   if (announce) {
     showToast(state.desktopTwinVisible ? "桌面数字分身已显示" : "桌面数字分身已隐藏");
   }
 }
 
-async function openDesktopTwinWindow() {
+async function loadDesktopPlatform() {
+  try {
+    const response = await fetch("/api/desktop/platform", { cache: "no-store" });
+    if (!response.ok) return null;
+    state.desktopPlatform = await response.json();
+    return state.desktopPlatform;
+  } catch {
+    return null;
+  }
+}
+
+function openDesktopBrowserFallback(preopenedWindow = null) {
+  preopenedWindow?.close?.();
+  return promptDesktopInstaller(true);
+}
+
+function isMacClient() {
+  const platform = navigator.userAgentData?.platform || navigator.platform || "";
+  const userAgent = navigator.userAgent || "";
+  return /mac/i.test(platform) || /Macintosh|Mac OS X/i.test(userAgent);
+}
+
+function isWindowsClient() {
+  const platform = navigator.userAgentData?.platform || navigator.platform || "";
+  const userAgent = navigator.userAgent || "";
+  return /win/i.test(platform) || /Windows/i.test(userAgent);
+}
+
+function getDesktopInstaller() {
+  if (isMacClient()) return DESKTOP_INSTALLERS.mac;
+  if (isWindowsClient()) return DESKTOP_INSTALLERS.windows;
+  return null;
+}
+
+function downloadDesktopInstaller(installer) {
+  const link = document.createElement("a");
+  link.href = installer.url;
+  link.download = installer.filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+async function promptDesktopInstaller(force = false) {
+  const platform = state.desktopPlatform || await loadDesktopPlatform();
+  if (platform?.desktopAvailable) {
+    return false;
+  }
+  const installer = getDesktopInstaller();
+  if (!installer) {
+    showToast("真正置顶需要安装本机桌面组件；当前支持 macOS 和 Windows");
+    return false;
+  }
+  const promptKey = `${DESKTOP_INSTALL_PROMPT_KEY}.${installer.label}`;
+  if (!force && localStorage.getItem(promptKey) === "true") {
+    return false;
+  }
+  localStorage.setItem(promptKey, "true");
+  downloadDesktopInstaller(installer);
+  showToast(`已下载 ${installer.label} 桌面组件，解压后打开即可置顶显示`);
+  return true;
+}
+
+async function openDesktopTwinWindow(options = {}) {
   const now = Date.now();
   if (state.desktopOpenInFlight || now - state.lastDesktopOpenAt < 1800) {
     return;
   }
+  const allowBrowserFallback = Boolean(options.browserFallback);
+  if (allowBrowserFallback && state.desktopPlatform && !state.desktopPlatform.desktopAvailable) {
+    openDesktopBrowserFallback();
+    state.lastDesktopOpenAt = now;
+    return;
+  }
+  let fallbackWindow = null;
+  if (allowBrowserFallback && !state.desktopPlatform) {
+    fallbackWindow = window.open("about:blank", "nekoSyncDesktopPet", [
+      "popup=yes",
+      "width=420",
+      "height=520",
+      "left=80",
+      "top=80",
+      "resizable=yes",
+      "scrollbars=no",
+      "noopener=no",
+    ].join(","));
+  }
   state.desktopOpenInFlight = true;
   state.lastDesktopOpenAt = now;
   try {
+    const platform = state.desktopPlatform || await loadDesktopPlatform();
+    if (allowBrowserFallback && platform && !platform.desktopAvailable) {
+      openDesktopBrowserFallback(fallbackWindow);
+      return;
+    }
     const response = await fetch("/api/desktop/open", { method: "POST" });
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}));
+      if (allowBrowserFallback && payload.error === "DESKTOP_APP_UNSUPPORTED_PLATFORM") {
+        openDesktopBrowserFallback(fallbackWindow);
+        return;
+      }
+      fallbackWindow?.close?.();
       const messages = {
         DESKTOP_APP_MISSING: "请先运行 npm run desktop:build 构建桌面分身",
         WINDOWS_DESKTOP_SCRIPT_MISSING: "缺少 Windows 桌面启动脚本",
         DESKTOP_APP_UNSUPPORTED_PLATFORM: "当前系统暂不支持自动打开桌面分身",
       };
       showToast(messages[payload.error] || "无法打开桌面数字分身");
+    } else {
+      fallbackWindow?.close?.();
     }
   } catch {
+    fallbackWindow?.close?.();
     showToast("无法连接桌面分身启动服务");
   } finally {
     state.desktopOpenInFlight = false;
@@ -1266,7 +1377,7 @@ elements.refreshDevicesButton.addEventListener("click", () => refreshCameraDevic
 elements.calibrateButton.addEventListener("click", calibrateEnvironment);
 elements.remoteCameraButton.addEventListener("click", startRemoteCamera);
 elements.desktopTwinButton?.addEventListener("click", () => {
-  setDesktopTwinVisible(!state.desktopTwinVisible);
+  setDesktopTwinVisible(!state.desktopTwinVisible, true, true);
 });
 elements.catSkinButton.addEventListener("click", () => {
   elements.skinDialog.showModal();
@@ -1601,6 +1712,7 @@ async function submitNicknameAuth() {
     updateAuthUI();
     elements.authDialog.close();
     showToast(state.authMode === "register" ? "注册成功" : "登录成功");
+    promptDesktopInstaller();
   } catch (error) {
     elements.authStatus.querySelector("span").textContent = error.message;
   } finally {
@@ -1648,6 +1760,7 @@ async function submitEmailAuth() {
     updateAuthUI();
     elements.authDialog.close();
     showToast(state.authMode === "register" ? "注册成功" : "登录成功");
+    promptDesktopInstaller();
   } catch (error) {
     elements.authStatus.querySelector("span").textContent = error.message;
   } finally {
@@ -1692,6 +1805,7 @@ async function submitPhoneAuth() {
     updateAuthUI();
     elements.authDialog.close();
     showToast(state.authMode === "register" ? "注册成功" : "登录成功");
+    promptDesktopInstaller();
   } catch (error) {
     elements.authStatus.querySelector("span").textContent = error.message;
   } finally {
@@ -2217,6 +2331,7 @@ loadCommunityFeed();
 resizePoseCanvas();
 refreshCameraDevices();
 renderDesktopTwinToggle();
+loadDesktopPlatform();
 loadSavedSkin();
 checkAuth();
 animationLoop(performance.now());

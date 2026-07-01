@@ -1,9 +1,25 @@
+param(
+  [string]$BaseUrl = $env:NEKO_SYNC_BASE_URL
+)
+
 $ErrorActionPreference = "Stop"
 
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
-$InfoUrl = "http://localhost:8000/api/info"
-$PetUrl = "http://localhost:8000/desktop-pet.html?mode=premium"
-$ProfileDir = Join-Path $Root ".build-cache\windows-desktop-profile"
+
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+  $BaseUrl = "https://yutanggo.com"
+}
+$BaseUrl = $BaseUrl.TrimEnd("/")
+$BaseUri = [Uri]$BaseUrl
+$UseLocalServer = @("localhost", "127.0.0.1", "::1") -contains $BaseUri.Host
+$InfoUrl = "$BaseUrl/api/info"
+$PetUrl = "$BaseUrl/desktop-pet.html?mode=premium"
+$ProfileRoot = if ($env:LOCALAPPDATA) {
+  Join-Path $env:LOCALAPPDATA "NEKO.SYNC"
+} else {
+  Join-Path $Root ".build-cache"
+}
+$ProfileDir = Join-Path $ProfileRoot "windows-desktop-profile"
 
 function Test-NekoServer {
   try {
@@ -52,7 +68,7 @@ function Get-BrowserPath {
   throw "Microsoft Edge or Google Chrome was not found."
 }
 
-if (-not (Test-NekoServer)) {
+if ($UseLocalServer -and -not (Test-NekoServer)) {
   Start-NekoServer
   $deadline = (Get-Date).AddSeconds(8)
   while ((Get-Date) -lt $deadline) {
@@ -62,7 +78,7 @@ if (-not (Test-NekoServer)) {
 }
 
 if (-not (Test-NekoServer)) {
-  throw "NEKO.SYNC local server did not start on http://localhost:8000."
+  throw "NEKO.SYNC service is not reachable at $InfoUrl."
 }
 
 New-Item -ItemType Directory -Force -Path $ProfileDir | Out-Null
@@ -75,4 +91,37 @@ $arguments = @(
   "--disable-features=CalculateNativeWinOcclusion"
 )
 
-Start-Process -FilePath $browser -ArgumentList $arguments -WorkingDirectory $Root
+$process = Start-Process -FilePath $browser -ArgumentList $arguments -WorkingDirectory $Root -PassThru
+
+$signature = @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class NekoWindowTools {
+  [DllImport("user32.dll")]
+  public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+}
+"@
+Add-Type -TypeDefinition $signature -ErrorAction SilentlyContinue | Out-Null
+
+$HWND_TOPMOST = [IntPtr](-1)
+$SWP_NOMOVE = 0x0002
+$SWP_NOSIZE = 0x0001
+$SWP_SHOWWINDOW = 0x0040
+$flags = $SWP_NOMOVE -bor $SWP_NOSIZE -bor $SWP_SHOWWINDOW
+
+$deadline = (Get-Date).AddSeconds(8)
+do {
+  Start-Sleep -Milliseconds 250
+  $windows = Get-Process -Name "msedge", "chrome" -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.MainWindowHandle -ne 0 -and (
+        $_.MainWindowTitle -like "*NEKO.SYNC*" -or
+        $_.Id -eq $process.Id
+      )
+    }
+  foreach ($window in $windows) {
+    [NekoWindowTools]::SetWindowPos($window.MainWindowHandle, $HWND_TOPMOST, 0, 0, 0, 0, $flags) | Out-Null
+    exit 0
+  }
+} while ((Get-Date) -lt $deadline)
