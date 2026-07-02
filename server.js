@@ -40,6 +40,7 @@ const APPEARANCE_PATH = path.join(ROOT, ".pet-appearance.json");
 const GENERATED_DIR = path.join(ROOT, ".generated");
 const AUTH_DIR = path.join(GENERATED_DIR, "auth");
 const USERS_PATH = path.join(AUTH_DIR, "users.json");
+const DESKTOP_TOKENS_PATH = path.join(AUTH_DIR, "desktop-tokens.json");
 const DESKTOP_APP_PATH = path.join(ROOT, "dist", "NEKO.SYNC Desktop Pet.app");
 const WINDOWS_DESKTOP_SCRIPT_PATH = path.join(ROOT, "scripts", "start-desktop-windows.ps1");
 
@@ -108,6 +109,7 @@ const reconstructionJobs = new Map();
 const twinClients = new Set();
 const sessions = new Map();
 const oauthStates = new Map(); // WeChat OAuth state tokens → { createdAt }
+const userTwinStates = new Map();
 
 // --- Rate Limiting ---
 const RATE_LIMIT_RPM = Number(process.env.RATE_LIMIT_RPM || 60);
@@ -610,6 +612,77 @@ function getCurrentUser(request) {
   }
   const users = readUsers();
   return users.users.find((user) => user.id === session.userId) || null;
+}
+
+function readDesktopTokens() {
+  const data = readJsonFile(DESKTOP_TOKENS_PATH, { tokens: [] });
+  const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 180;
+  const tokens = (data.tokens || []).filter((entry) => Number(entry.createdAt || 0) > cutoff);
+  if (tokens.length !== (data.tokens || []).length) {
+    writeJsonFile(DESKTOP_TOKENS_PATH, { tokens });
+  }
+  return { tokens };
+}
+
+function writeDesktopTokens(data) {
+  writeJsonFile(DESKTOP_TOKENS_PATH, { tokens: data.tokens || [] });
+}
+
+function createDesktopToken(userId) {
+  const data = readDesktopTokens();
+  const token = crypto.randomBytes(32).toString("hex");
+  data.tokens.push({
+    token,
+    userId,
+    createdAt: Date.now(),
+    lastUsedAt: Date.now(),
+  });
+  writeDesktopTokens(data);
+  return token;
+}
+
+function getDesktopUser(requestUrl) {
+  const authHeader = requestUrl.searchParams.get("desktopToken") || "";
+  const token = authHeader || "";
+  if (!token || !/^[a-f0-9]{64}$/i.test(token)) {
+    return null;
+  }
+  const data = readDesktopTokens();
+  const entry = data.tokens.find((item) => item.token === token);
+  if (!entry) {
+    return null;
+  }
+  entry.lastUsedAt = Date.now();
+  writeDesktopTokens(data);
+  const users = readUsers();
+  return users.users.find((user) => user.id === entry.userId) || null;
+}
+
+function getRequestUser(request, requestUrl) {
+  return getCurrentUser(request) || getDesktopUser(requestUrl);
+}
+
+function cloneTwinState(state) {
+  return JSON.parse(JSON.stringify(state));
+}
+
+function getTwinStateForUser(userId) {
+  if (!userId) {
+    return twinState;
+  }
+  if (!userTwinStates.has(userId)) {
+    userTwinStates.set(userId, cloneTwinState(twinState));
+  }
+  return userTwinStates.get(userId);
+}
+
+function setTwinStateForUser(userId, nextState) {
+  if (!userId) {
+    twinState = nextState;
+    return twinState;
+  }
+  userTwinStates.set(userId, nextState);
+  return nextState;
 }
 
 function registerUser(email, password, phone) {
@@ -2519,13 +2592,16 @@ async function handleApi(request, response, requestUrl) {
 
   if (requestUrl.pathname === "/api/twin/state") {
     if (request.method === "GET") {
-      sendJson(response, 200, twinState);
+      const user = getRequestUser(request, requestUrl);
+      sendJson(response, 200, getTwinStateForUser(user?.id));
       return true;
     }
     if (request.method === "POST") {
       try {
+        const user = getRequestUser(request, requestUrl);
+        const currentState = getTwinStateForUser(user?.id);
         const payload = await readJson(request);
-        twinState = {
+        const nextState = {
           visible: payload.visible !== false,
           displayMode: payload.displayMode === "custom-pending" ? "custom-pending" : "live",
           action: [
@@ -2548,10 +2624,11 @@ async function handleApi(request, response, requestUrl) {
           direction: Math.max(-1, Math.min(1, Number(payload.direction) || 0)),
           intensity: Math.max(0, Math.min(1, Number(payload.intensity) || 0)),
           speed: Math.max(0, Math.min(1, Number(payload.speed) || 0)),
-          appearance: twinState.appearance,
+          appearance: currentState.appearance,
           updatedAt: Date.now(),
         };
-        broadcastTwinState();
+        setTwinStateForUser(user?.id, nextState);
+        broadcastTwinState(user?.id);
         sendJson(response, 202, { ok: true });
       } catch (error) {
         sendJson(response, 400, { error: error.message });
@@ -2559,6 +2636,39 @@ async function handleApi(request, response, requestUrl) {
       return true;
     }
     sendJson(response, 405, { error: "METHOD_NOT_ALLOWED" });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/desktop/link") {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "METHOD_NOT_ALLOWED" });
+      return true;
+    }
+    try {
+      const user = getCurrentUser(request);
+      if (!user) {
+        sendJson(response, 401, { error: "AUTH_REQUIRED" });
+        return true;
+      }
+      const token = createDesktopToken(user.id);
+      const baseUrl = IS_PRODUCTION
+        ? "https://yutanggo.com"
+        : `http://localhost:${LOCAL_PORT}`;
+      const params = new URLSearchParams({
+        baseUrl,
+        desktopToken: token,
+        userId: user.id,
+      });
+      sendJson(response, 201, {
+        ok: true,
+        deepLink: `neko-sync://spawn?${params.toString()}`,
+        desktopToken: token,
+        baseUrl,
+        user: publicUser(user),
+      });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return true;
   }
 
@@ -2636,12 +2746,17 @@ async function handleApi(request, response, requestUrl) {
   }
 
   if (request.method === "POST" && requestUrl.pathname === "/api/twin/snack") {
-    twinState.snack = (twinState.snack || 0) + 1;
-    twinState.updatedAt = Date.now();
-    const snackData = { count: twinState.snack, at: twinState.updatedAt };
+    const user = getRequestUser(request, requestUrl);
+    const currentState = getTwinStateForUser(user?.id);
+    currentState.snack = (currentState.snack || 0) + 1;
+    currentState.updatedAt = Date.now();
+    setTwinStateForUser(user?.id, currentState);
+    const snackData = { count: currentState.snack, at: currentState.updatedAt };
     twinClients.forEach((client) => {
-      if (!client.writableEnded) {
-        client.write(`event: snack\ndata: ${JSON.stringify(snackData)}\n\n`);
+      if (client.response.writableEnded) {
+        twinClients.delete(client);
+      } else if (client.userId === (user?.id || null)) {
+        client.response.write(`event: snack\ndata: ${JSON.stringify(snackData)}\n\n`);
       }
     });
     sendJson(response, 202, { ok: true, snack: snackData });
@@ -2649,7 +2764,7 @@ async function handleApi(request, response, requestUrl) {
   }
 
   if (request.method === "GET" && requestUrl.pathname === "/api/subscription/status") {
-    const user = getCurrentUser(request);
+    const user = getRequestUser(request, requestUrl);
     const quota = checkChatQuota(user || { plan: "none" });
     sendJson(response, 200, {
       plan: user?.plan || "none",
@@ -2723,7 +2838,7 @@ async function handleApi(request, response, requestUrl) {
 
   if (request.method === "POST" && requestUrl.pathname === "/api/chat") {
     try {
-      const user = getCurrentUser(request);
+      const user = getRequestUser(request, requestUrl);
       const quota = checkChatQuota(user || { plan: "none" });
       if (!quota.allowed) {
         sendJson(response, 429, {
@@ -2798,8 +2913,8 @@ async function handleApi(request, response, requestUrl) {
       const result = await apiResponse.json();
       const reply = result.choices?.[0]?.message?.content || "喵...（打了个哈欠）";
 
-      if (user) recordChatUsage(user);
-      const updatedQuota = user ? checkChatQuota(getCurrentUser(request)) : quota;
+      const updatedUser = user ? recordChatUsage(user) : null;
+      const updatedQuota = updatedUser ? checkChatQuota(updatedUser) : quota;
       sendJson(response, 200, { reply, quota: updatedQuota });
     } catch (error) {
       console.error("[Chat]", error.message);
@@ -2811,16 +2926,22 @@ async function handleApi(request, response, requestUrl) {
 
   if (requestUrl.pathname === "/api/twin/appearance") {
     if (request.method === "GET") {
-      sendJson(response, 200, twinState.appearance);
+      const user = getRequestUser(request, requestUrl);
+      sendJson(response, 200, getTwinStateForUser(user?.id).appearance);
       return true;
     }
     if (request.method === "POST") {
       try {
-        twinState.appearance = normalizeAppearance(await readJson(request));
-        saveAppearance(twinState.appearance);
-        twinState.updatedAt = Date.now();
-        broadcastTwinState();
-        sendJson(response, 202, twinState.appearance);
+        const user = getRequestUser(request, requestUrl);
+        const currentState = getTwinStateForUser(user?.id);
+        currentState.appearance = normalizeAppearance(await readJson(request));
+        if (!user?.id) {
+          saveAppearance(currentState.appearance);
+        }
+        currentState.updatedAt = Date.now();
+        setTwinStateForUser(user?.id, currentState);
+        broadcastTwinState(user?.id);
+        sendJson(response, 202, currentState.appearance);
       } catch (error) {
         sendJson(response, error.message === "PAYLOAD_TOO_LARGE" ? 413 : 400, {
           error: error.message,
@@ -3286,15 +3407,17 @@ async function handleApi(request, response, requestUrl) {
       sendJson(response, 503, { error: "TOO_MANY_SSE_CLIENTS" });
       return true;
     }
+    const user = getRequestUser(request, requestUrl);
     response.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-store",
       "Connection": "keep-alive",
     });
     applySecurityHeaders(response);
-    response.write(`data: ${JSON.stringify(twinState)}\n\n`);
-    twinClients.add(response);
-    request.on("close", () => twinClients.delete(response));
+    response.write(`data: ${JSON.stringify(getTwinStateForUser(user?.id))}\n\n`);
+    const client = { response, userId: user?.id || null };
+    twinClients.add(client);
+    request.on("close", () => twinClients.delete(client));
     return true;
   }
 
@@ -3452,13 +3575,14 @@ async function handleApi(request, response, requestUrl) {
   return true;
 }
 
-function broadcastTwinState() {
-  const event = `data: ${JSON.stringify(twinState)}\n\n`;
+function broadcastTwinState(userId = null) {
+  const eventUserId = userId || null;
+  const event = `data: ${JSON.stringify(getTwinStateForUser(eventUserId))}\n\n`;
   twinClients.forEach((client) => {
-    if (client.writableEnded) {
+    if (client.response.writableEnded) {
       twinClients.delete(client);
-    } else {
-      client.write(event);
+    } else if (client.userId === eventUserId) {
+      client.response.write(event);
     }
   });
 }
@@ -3557,7 +3681,7 @@ function shutdown(signal) {
   logger.info(`Received ${signal}, shutting down gracefully...`);
   // Close all SSE connections
   twinClients.forEach((client) => {
-    client.end();
+    client.response.end();
   });
   twinClients.clear();
   rooms.clear();

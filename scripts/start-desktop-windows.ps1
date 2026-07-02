@@ -1,24 +1,104 @@
 param(
-  [string]$BaseUrl = $env:NEKO_SYNC_BASE_URL
+  [string]$LaunchUrl = "",
+  [string]$BaseUrl = $env:NEKO_SYNC_BASE_URL,
+  [string]$DesktopToken = ""
 )
 
 $ErrorActionPreference = "Stop"
 
 $Root = Resolve-Path (Join-Path $PSScriptRoot "..")
+$PackagedLauncherCmd = Join-Path $PSScriptRoot "NEKO.SYNC Desktop Pet.cmd"
+$SourceLauncherCmd = Join-Path $PSScriptRoot "start-desktop-windows.cmd"
+$LauncherCmd = if (Test-Path $PackagedLauncherCmd) { $PackagedLauncherCmd } else { $SourceLauncherCmd }
+$ConfigRoot = if ($env:LOCALAPPDATA) {
+  Join-Path $env:LOCALAPPDATA "NEKO.SYNC"
+} else {
+  Join-Path $Root ".build-cache"
+}
+$ConfigPath = Join-Path $ConfigRoot "desktop-link.json"
+
+function ConvertFrom-UrlEncodedForm {
+  param([string]$Query)
+  $values = @{}
+  if ([string]::IsNullOrWhiteSpace($Query)) { return $values }
+  foreach ($part in $Query.TrimStart("?").Split("&")) {
+    if ([string]::IsNullOrWhiteSpace($part)) { continue }
+    $pair = $part.Split("=", 2)
+    $key = [Uri]::UnescapeDataString($pair[0])
+    $value = if ($pair.Count -gt 1) { [Uri]::UnescapeDataString($pair[1]) } else { "" }
+    $values[$key] = $value
+  }
+  return $values
+}
+
+function Register-NekoProtocol {
+  if (-not (Test-Path $LauncherCmd)) { return }
+  $command = "`"$LauncherCmd`" `"%1`""
+  $baseKey = "HKCU:\Software\Classes\neko-sync"
+  New-Item -Path $baseKey -Force | Out-Null
+  Set-Item -Path $baseKey -Value "URL:NEKO.SYNC Desktop Link"
+  New-ItemProperty -Path $baseKey -Name "URL Protocol" -Value "" -Force | Out-Null
+  New-Item -Path "$baseKey\shell\open\command" -Force | Out-Null
+  Set-Item -Path "$baseKey\shell\open\command" -Value $command
+}
+
+function Read-NekoConfig {
+  if (-not (Test-Path $ConfigPath)) { return @{} }
+  try {
+    $json = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+    $data = @{}
+    foreach ($property in $json.PSObject.Properties) {
+      $data[$property.Name] = [string]$property.Value
+    }
+    return $data
+  } catch {
+    return @{}
+  }
+}
+
+function Write-NekoConfig {
+  param([hashtable]$Data)
+  New-Item -ItemType Directory -Force -Path $ConfigRoot | Out-Null
+  $Data | ConvertTo-Json | Set-Content -Path $ConfigPath -Encoding UTF8
+}
+
+Register-NekoProtocol
+
+if ($LaunchUrl -like "neko-sync://*") {
+  $launchUri = [Uri]$LaunchUrl
+  $params = ConvertFrom-UrlEncodedForm $launchUri.Query
+  if ($params.ContainsKey("baseUrl") -and -not [string]::IsNullOrWhiteSpace($params["baseUrl"])) {
+    $BaseUrl = $params["baseUrl"]
+  }
+  if ($params.ContainsKey("desktopToken") -and -not [string]::IsNullOrWhiteSpace($params["desktopToken"])) {
+    $DesktopToken = $params["desktopToken"]
+  }
+}
+
+$config = Read-NekoConfig
+if ([string]::IsNullOrWhiteSpace($BaseUrl) -and $config.ContainsKey("baseUrl")) {
+  $BaseUrl = $config["baseUrl"]
+}
+if ([string]::IsNullOrWhiteSpace($DesktopToken) -and $config.ContainsKey("desktopToken")) {
+  $DesktopToken = $config["desktopToken"]
+}
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
   $BaseUrl = "https://yutanggo.com"
 }
 $BaseUrl = $BaseUrl.TrimEnd("/")
+if (-not [string]::IsNullOrWhiteSpace($DesktopToken)) {
+  Write-NekoConfig @{ baseUrl = $BaseUrl; desktopToken = $DesktopToken }
+}
 $BaseUri = [Uri]$BaseUrl
 $UseLocalServer = @("localhost", "127.0.0.1", "::1") -contains $BaseUri.Host
 $InfoUrl = "$BaseUrl/api/info"
-$PetUrl = "$BaseUrl/desktop-pet.html?mode=premium"
-$ProfileRoot = if ($env:LOCALAPPDATA) {
-  Join-Path $env:LOCALAPPDATA "NEKO.SYNC"
-} else {
-  Join-Path $Root ".build-cache"
+$PetQuery = "mode=premium"
+if (-not [string]::IsNullOrWhiteSpace($DesktopToken)) {
+  $PetQuery = "$PetQuery&desktopToken=$([Uri]::EscapeDataString($DesktopToken))"
 }
+$PetUrl = "$BaseUrl/desktop-pet.html?$PetQuery"
+$ProfileRoot = $ConfigRoot
 $ProfileDir = Join-Path $ProfileRoot "windows-desktop-profile"
 
 function Test-NekoServer {

@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var serverProcess: Process?
     private var petMode = "premium"
     private let defaultBaseURL = "https://yutanggo.com"
+    private let defaults = UserDefaults.standard
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -39,8 +40,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func baseURLString() -> String {
         let environmentValue = ProcessInfo.processInfo.environment["NEKO_SYNC_BASE_URL"]?
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let value = environmentValue?.isEmpty == false ? environmentValue! : defaultBaseURL
+        let linkedValue = defaults.string(forKey: "NEKOSyncBaseURL")?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let value = environmentValue?.isEmpty == false
+            ? environmentValue!
+            : (linkedValue?.isEmpty == false ? linkedValue! : defaultBaseURL)
         return value.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private func desktopToken() -> String {
+        defaults.string(forKey: "NEKOSyncDesktopToken") ?? ""
     }
 
     private func usesLocalServer() -> Bool {
@@ -181,8 +190,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func loadCurrentPetMode() {
         let cacheBust = Int(Date().timeIntervalSince1970)
+        var query = "mode=\(petMode)&v=\(cacheBust)"
+        let token = desktopToken()
+        if !token.isEmpty {
+            query += "&desktopToken=\(token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token)"
+        }
         let petURL = URL(
-            string: "\(baseURLString())/desktop-pet.html?mode=\(petMode)&v=\(cacheBust)"
+            string: "\(baseURLString())/desktop-pet.html?\(query)"
         )!
         let request = URLRequest(
             url: petURL,
@@ -226,6 +240,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.open(URL(string: baseURLString())!)
     }
     @objc private func quit() { NSApp.terminate(nil) }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let url = urls.first, url.scheme == "neko-sync" else { return }
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let params = Dictionary(uniqueKeysWithValues: (components?.queryItems ?? []).map {
+            ($0.name, $0.value ?? "")
+        })
+        if let baseUrl = params["baseUrl"], !baseUrl.isEmpty {
+            defaults.set(baseUrl, forKey: "NEKOSyncBaseURL")
+        }
+        if let token = params["desktopToken"], !token.isEmpty {
+            defaults.set(token, forKey: "NEKOSyncDesktopToken")
+        }
+        petMode = "premium"
+        ensureServer()
+        if panel == nil {
+            createPanel()
+            createStatusMenu()
+        }
+        loadPet()
+        panel.orderFrontRegardless()
+    }
 
     func applicationWillTerminate(_ notification: Notification) {
         if serverProcess?.isRunning == true {

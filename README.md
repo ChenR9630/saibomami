@@ -71,8 +71,8 @@ dist/NEKO.SYNC Desktop Pet.app
 
 ### Windows
 
-Windows 版先采用 Edge / Chrome 的应用窗口运行桌面宠物页，不需要额外安装 Electron。
-它会自动连接同一个本地 Node 服务和 `/api/twin/events` 动作流。
+Windows 版采用轻量原生协议壳 + Edge / Chrome 应用窗口运行桌面宠物页，不需要额外安装 Electron。
+首次运行会在当前用户注册 `neko-sync://` URL Protocol；之后网页端“桌面显示”会像 macOS 一样通过深链唤起本机桌面分身，并携带账号绑定 token 连接同一条 `/api/twin/events` 动作流。
 
 启动：
 
@@ -88,12 +88,14 @@ scripts/start-desktop-windows.cmd
 
 脚本会：
 
+- 注册 `neko-sync://` 深链协议到当前 Windows 用户。
+- 解析 `neko-sync://spawn?baseUrl=...&desktopToken=...`，并把账号绑定信息保存到 `%LOCALAPPDATA%\NEKO.SYNC\desktop-link.json`。
 - 检查 `http://localhost:8000/api/info` 是否可用。
 - 如果本地服务未运行，自动用 `node server.js` 启动。
-- 优先使用 Microsoft Edge，其次使用 Google Chrome，以 app 模式打开 `desktop-pet.html`。
-- 控制台中的“桌面显示”按钮在 Windows 上也会调用同一套启动逻辑。
+- 优先使用 Microsoft Edge，其次使用 Google Chrome，以 app 模式打开 `desktop-pet.html?mode=premium&desktopToken=...`。
+- 控制台中的“桌面显示”按钮在 Windows 上会调用同一套深链启动逻辑。
 
-当前 Windows 版是可运行适配层；透明、始终置顶、托盘菜单等原生窗口能力仍由 macOS Swift 版提供。
+当前 Windows 版是可运行协议壳；它会尝试将 Edge / Chrome 应用窗口置顶。透明窗口、托盘菜单等更完整原生窗口能力后续可升级为 Tauri / Electron 壳。
 - 菜单栏可重新显示宠物、打开控制台或退出。
 - 应用会尝试自动启动本地服务。
 

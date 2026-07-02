@@ -1,7 +1,10 @@
 const desktopCat = document.querySelector("#desktopCat");
 const desktopStatus = document.querySelector("#desktopStatus");
 const desktopStage = document.querySelector("#desktopStage");
-const desktopMode = new URLSearchParams(location.search).get("mode") === "free"
+const desktopParams = new URLSearchParams(location.search);
+const desktopToken = desktopParams.get("desktopToken") || "";
+const desktopAuthQuery = desktopToken ? `desktopToken=${encodeURIComponent(desktopToken)}` : "";
+const desktopMode = desktopParams.get("mode") === "free"
   ? "free"
   : "premium";
 const scaleStorageKey = "neko.desktopPet.scale";
@@ -25,6 +28,13 @@ let customPendingActive = false;
 let customPendingModelLoaded = false;
 let customPendingActionTimer = null;
 let customPendingActionIndex = 0;
+
+function desktopApiUrl(path) {
+  if (!desktopAuthQuery) {
+    return path;
+  }
+  return `${path}${path.includes("?") ? "&" : "?"}${desktopAuthQuery}`;
+}
 
 // --- Chat state ---
 const chatLayer = document.querySelector("#chatLayer");
@@ -76,7 +86,7 @@ function updateQuotaDisplay(quota) {
 
 async function fetchQuotaStatus() {
   try {
-    const r = await fetch("/api/subscription/status", { cache: "no-store" });
+    const r = await fetch(desktopApiUrl("/api/subscription/status"), { cache: "no-store" });
     if (r.ok) {
       const data = await r.json();
       updateQuotaDisplay(data.chatQuota);
@@ -278,7 +288,7 @@ async function sendChatMessage(message) {
   showSpeech("...", true);
 
   try {
-    const response = await fetch("/api/chat", {
+    const response = await fetch(desktopApiUrl("/api/chat"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: userMsg, petName, history: chatHistory.slice(0, -1) }),
@@ -391,7 +401,7 @@ desktopStage.addEventListener("drop", async (e) => {
       addChatMessage("user", `[投喂图片: ${result.name}]`);
       chatHistory.push({ role: "user", content: `[用户投喂了一张图片: ${result.name}]，请描述图片内容并回应` });
       const loadingEl = addChatMessage("loading", petName + " 正在看图...");
-      const response = await fetch("/api/chat", {
+      const response = await fetch(desktopApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -415,7 +425,7 @@ desktopStage.addEventListener("drop", async (e) => {
       const filePrompt = `主人给我投喂了一个文件 "${result.name}"，内容是：\n\n${result.content.slice(0, 6000)}\n\n请阅读这个文件的内容并给出你的看法或总结。用猫咪口吻。`;
       chatHistory.push({ role: "user", content: filePrompt });
       const loadingEl = addChatMessage("loading", petName + " 正在阅读文件...");
-      const response = await fetch("/api/chat", {
+      const response = await fetch(desktopApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: filePrompt, petName, history: chatHistory.slice(0, -1) }),
@@ -576,7 +586,7 @@ async function loadDesktopTwinModel() {
   document.body.classList.add("desktop-mode-premium");
   if (!window.twin3D) return;
   try {
-    const r = await fetch("/api/twin/3d", { cache: "no-store" });
+    const r = await fetch(desktopApiUrl("/api/twin/3d"), { cache: "no-store" });
     const p = await r.json();
     if (p.modelUrl) {
       await window.twin3D.loadModel(p.modelUrl, p.animations);
@@ -591,7 +601,7 @@ async function loadDesktopTwinModel() {
 
 function connectDesktopTwin() {
   window.clearTimeout(reconnectTimer);
-  const events = new EventSource("/api/twin/events");
+  const events = new EventSource(desktopApiUrl("/api/twin/events"));
   events.onmessage = (e) => applyDesktopState(JSON.parse(e.data));
   events.onerror = () => {
     events.close();

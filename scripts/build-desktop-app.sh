@@ -38,6 +38,17 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
   <string>0.1.0</string>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>NEKO.SYNC Desktop Link</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>neko-sync</string>
+      </array>
+    </dict>
+  </array>
   <key>LSMinimumSystemVersion</key>
   <string>13.0</string>
   <key>LSUIElement</key>

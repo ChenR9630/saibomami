@@ -481,6 +481,17 @@ function openDesktopBrowserFallback(preopenedWindow = null) {
   return promptDesktopInstaller(true);
 }
 
+async function createDesktopLink() {
+  const response = await fetch("/api/desktop/link", { method: "POST" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(payload.error || "DESKTOP_LINK_FAILED");
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
+
 function isMacClient() {
   const platform = navigator.userAgentData?.platform || navigator.platform || "";
   const userAgent = navigator.userAgent || "";
@@ -534,53 +545,32 @@ async function openDesktopTwinWindow(options = {}) {
   if (state.desktopOpenInFlight || now - state.lastDesktopOpenAt < 1800) {
     return;
   }
-  const allowBrowserFallback = Boolean(options.browserFallback);
-  if (allowBrowserFallback && state.desktopPlatform && !state.desktopPlatform.desktopAvailable) {
-    openDesktopBrowserFallback();
-    state.lastDesktopOpenAt = now;
+  if (!state.authUser) {
+    showToast("请先登录账号，再把数字分身放到桌面");
+    openAuthDialog("login");
     return;
   }
-  let fallbackWindow = null;
-  if (allowBrowserFallback && !state.desktopPlatform) {
-    fallbackWindow = window.open("about:blank", "nekoSyncDesktopPet", [
-      "popup=yes",
-      "width=420",
-      "height=520",
-      "left=80",
-      "top=80",
-      "resizable=yes",
-      "scrollbars=no",
-      "noopener=no",
-    ].join(","));
-  }
+  const allowBrowserFallback = Boolean(options.browserFallback);
   state.desktopOpenInFlight = true;
   state.lastDesktopOpenAt = now;
   try {
-    const platform = state.desktopPlatform || await loadDesktopPlatform();
-    if (allowBrowserFallback && platform && !platform.desktopAvailable) {
-      openDesktopBrowserFallback(fallbackWindow);
-      return;
+    const link = await createDesktopLink();
+    window.location.href = link.deepLink;
+    showToast("正在唤起桌面数字分身");
+    if (allowBrowserFallback) {
+      window.setTimeout(() => {
+        if (document.visibilityState === "visible") {
+          promptDesktopInstaller(true);
+        }
+      }, 1800);
     }
-    const response = await fetch("/api/desktop/open", { method: "POST" });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      if (allowBrowserFallback && payload.error === "DESKTOP_APP_UNSUPPORTED_PLATFORM") {
-        openDesktopBrowserFallback(fallbackWindow);
-        return;
-      }
-      fallbackWindow?.close?.();
-      const messages = {
-        DESKTOP_APP_MISSING: "请先运行 npm run desktop:build 构建桌面分身",
-        WINDOWS_DESKTOP_SCRIPT_MISSING: "缺少 Windows 桌面启动脚本",
-        DESKTOP_APP_UNSUPPORTED_PLATFORM: "当前系统暂不支持自动打开桌面分身",
-      };
-      showToast(messages[payload.error] || "无法打开桌面数字分身");
+  } catch (error) {
+    if (error.message === "AUTH_REQUIRED") {
+      showToast("请先登录账号，再把数字分身放到桌面");
+      openAuthDialog("login");
     } else {
-      fallbackWindow?.close?.();
+      showToast("无法生成桌面同步链接");
     }
-  } catch {
-    fallbackWindow?.close?.();
-    showToast("无法连接桌面分身启动服务");
   } finally {
     state.desktopOpenInFlight = false;
   }
