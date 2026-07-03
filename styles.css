@@ -845,6 +845,18 @@ h1 em::after {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.twin-skin-actions .desktop-download-button {
+  min-width: 96px;
+  color: rgba(233, 235, 227, 0.86);
+  border: 1px solid rgba(198, 235, 103, 0.34);
+  background: rgba(198, 235, 103, 0.1);
+}
+
+.twin-skin-actions .desktop-download-button:disabled {
+  cursor: wait;
+  opacity: 0.54;
+}
+
 .desktop-toggle-button > span:first-child {
   width: 8px;
   height: 8px;

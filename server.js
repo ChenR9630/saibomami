@@ -3587,7 +3587,7 @@ function broadcastTwinState(userId = null) {
   });
 }
 
-function serveStatic(response, pathname) {
+function serveStatic(request, response, pathname) {
   if (VENDOR_FILES.has(pathname)) {
     const vendorPath = VENDOR_FILES.get(pathname);
     if (!fs.existsSync(vendorPath)) {
@@ -3597,9 +3597,14 @@ function serveStatic(response, pathname) {
     }
     response.writeHead(200, {
       "Content-Type": "text/javascript; charset=utf-8",
+      "Content-Length": fs.statSync(vendorPath).size,
       "Cache-Control": "no-cache",
       "X-Content-Type-Options": "nosniff",
     });
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
     fs.createReadStream(vendorPath).pipe(response);
     return;
   }
@@ -3626,9 +3631,14 @@ function serveStatic(response, pathname) {
 
     response.writeHead(200, {
       "Content-Type": MIME_TYPES[path.extname(filePath)] || "application/octet-stream",
+      "Content-Length": stats.size,
       "Cache-Control": "no-cache",
       "X-Content-Type-Options": "nosniff",
     });
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
     fs.createReadStream(filePath).pipe(response);
   });
 }
@@ -3655,7 +3665,7 @@ async function handleRequest(request, response) {
       }
       return;
     }
-    serveStatic(response, requestUrl.pathname);
+    serveStatic(request, response, requestUrl.pathname);
   } catch (error) {
     logger.error("Unhandled request error", { message: error.message, url: request.url });
     if (!response.headersSent) {

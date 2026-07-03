@@ -7,6 +7,7 @@ const elements = {
   remoteCameraButton: document.querySelector("#remoteCameraButton"),
   desktopTwinButton: document.querySelector("#desktopTwinButton"),
   desktopTwinButtonLabel: document.querySelector("#desktopTwinButtonLabel"),
+  desktopDownloadButton: document.querySelector("#desktopDownloadButton"),
   catSkinButton: document.querySelector("#catSkinButton"),
   catSkinButtonLabel: document.querySelector("#catSkinButtonLabel"),
   skinControlHint: document.querySelector("#skinControlHint"),
@@ -520,6 +521,41 @@ function downloadDesktopInstaller(installer) {
   link.remove();
 }
 
+async function checkDesktopInstaller(installer) {
+  try {
+    const response = await fetch(installer.url, {
+      method: "HEAD",
+      cache: "no-store",
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function handleDesktopInstallerDownload(forceCheck = true) {
+  const installer = getDesktopInstaller();
+  if (!installer) {
+    showToast("当前只提供 macOS 和 Windows 桌面客户端");
+    return false;
+  }
+  if (forceCheck) {
+    elements.desktopDownloadButton.disabled = true;
+    try {
+      const available = await checkDesktopInstaller(installer);
+      if (!available) {
+        showToast(`${installer.label} 客户端安装包暂时无法访问`);
+        return false;
+      }
+    } finally {
+      elements.desktopDownloadButton.disabled = false;
+    }
+  }
+  downloadDesktopInstaller(installer);
+  showToast(`已开始下载 ${installer.label} 客户端`);
+  return true;
+}
+
 async function promptDesktopInstaller(force = false) {
   const platform = state.desktopPlatform || await loadDesktopPlatform();
   if (platform?.desktopAvailable) {
@@ -535,9 +571,7 @@ async function promptDesktopInstaller(force = false) {
     return false;
   }
   localStorage.setItem(promptKey, "true");
-  downloadDesktopInstaller(installer);
-  showToast(`已下载 ${installer.label} 桌面组件，解压后打开即可置顶显示`);
-  return true;
+  return handleDesktopInstallerDownload(false);
 }
 
 async function openDesktopTwinWindow(options = {}) {
@@ -1368,6 +1402,9 @@ elements.calibrateButton.addEventListener("click", calibrateEnvironment);
 elements.remoteCameraButton.addEventListener("click", startRemoteCamera);
 elements.desktopTwinButton?.addEventListener("click", () => {
   setDesktopTwinVisible(!state.desktopTwinVisible, true, true);
+});
+elements.desktopDownloadButton?.addEventListener("click", () => {
+  handleDesktopInstallerDownload(true);
 });
 elements.catSkinButton.addEventListener("click", () => {
   elements.skinDialog.showModal();
