@@ -2034,6 +2034,27 @@ function showPaymentDialog() {
 
 async function checkAuth() {
   try {
+    const desktopParams = new URLSearchParams(window.location.search);
+    const desktopToken = desktopParams.get("desktopToken") || "";
+    if (/^[a-f0-9]{64}$/i.test(desktopToken)) {
+      const sessionResponse = await fetch(
+        `/api/desktop/session?desktopToken=${encodeURIComponent(desktopToken)}`,
+        { method: "POST" },
+      );
+      const sessionPayload = await sessionResponse.json().catch(() => ({}));
+      if (sessionResponse.ok && sessionPayload.user) {
+        state.authUser = sessionPayload.user;
+        desktopParams.delete("desktopToken");
+        desktopParams.delete("client");
+        const nextQuery = desktopParams.toString();
+        window.history.replaceState(
+          {},
+          "",
+          `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`,
+        );
+        showToast("桌面客户端已绑定当前账号");
+      }
+    }
     const response = await fetch("/api/auth/me");
     const payload = await response.json();
     if (payload.user) {

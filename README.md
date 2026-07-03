@@ -71,8 +71,8 @@ dist/NEKO.SYNC Desktop Pet.app
 
 ### Windows
 
-Windows 版采用轻量原生协议壳 + Edge / Chrome 应用窗口运行桌面宠物页，不需要额外安装 Electron。
-首次运行会在当前用户注册 `neko-sync://` URL Protocol；之后网页端“桌面显示”会像 macOS 一样通过深链唤起本机桌面分身，并携带账号绑定 token 连接同一条 `/api/twin/events` 动作流。
+Windows 版采用轻量原生协议壳 + Edge / Chrome 应用窗口运行完整 NEKO.SYNC 网页端，不需要额外安装 Electron。
+首次运行会在当前用户注册 `neko-sync://` URL Protocol；之后网页端“桌面显示”会通过深链唤起本机客户端，并携带账号绑定 token 自动登录到同一账号。
 
 启动：
 
@@ -84,20 +84,19 @@ npm run desktop:open:win
 
 ```text
 scripts/start-desktop-windows.cmd
+dist/NEKO.SYNC Windows Client/NEKO.SYNC Client.cmd
 ```
 
 脚本会：
 
 - 注册 `neko-sync://` 深链协议到当前 Windows 用户。
 - 解析 `neko-sync://spawn?baseUrl=...&desktopToken=...`，并把账号绑定信息保存到 `%LOCALAPPDATA%\NEKO.SYNC\desktop-link.json`。
-- 检查 `http://localhost:8000/api/info` 是否可用。
-- 如果本地服务未运行，自动用 `node server.js` 启动。
-- 优先使用 Microsoft Edge，其次使用 Google Chrome，以 app 模式打开 `desktop-pet.html?mode=premium&desktopToken=...`。
-- 控制台中的“桌面显示”按钮在 Windows 上会调用同一套深链启动逻辑。
+- 检查 `https://yutanggo.com/api/health` 或本地开发服务是否可用。
+- 本地开发服务未运行时，自动用 `node server.js` 启动。
+- 优先使用 Microsoft Edge，其次使用 Google Chrome，以 app 模式打开完整首页 `/?client=windows&desktopToken=...`。
+- 启动失败时弹出错误，并把日志写入 `%LOCALAPPDATA%\NEKO.SYNC\windows-client.log`。
 
-当前 Windows 版是可运行协议壳；它会尝试将 Edge / Chrome 应用窗口置顶。透明窗口、托盘菜单等更完整原生窗口能力后续可升级为 Tauri / Electron 壳。
-- 菜单栏可重新显示宠物、打开控制台或退出。
-- 应用会尝试自动启动本地服务。
+当前 Windows 版定位是完整网页客户端壳；透明悬浮窗、托盘菜单等更完整原生能力后续可升级为 Tauri / Electron 壳。
 
 ## AI 身份分身
 

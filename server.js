@@ -2298,8 +2298,19 @@ async function handleApi(request, response, requestUrl) {
 
   if (request.method === "GET" && requestUrl.pathname === "/api/auth/me") {
     sendJson(response, 200, {
-      user: publicUser(getCurrentUser(request)),
+      user: publicUser(getRequestUser(request, requestUrl)),
     });
+    return true;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/desktop/session") {
+    const user = getDesktopUser(requestUrl);
+    if (!user) {
+      sendJson(response, 401, { error: "AUTH_REQUIRED" });
+      return true;
+    }
+    createSession(response, user.id);
+    sendJson(response, 200, { user: publicUser(user) });
     return true;
   }
 
